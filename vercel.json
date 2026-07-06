@@ -1,0 +1,17 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "functions": {
+    "app/api/simulate/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/resilience-score/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/household/route.ts": {
+      "maxDuration": 10
+    }
+  }
+}
