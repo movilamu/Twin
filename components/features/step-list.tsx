@@ -59,7 +59,14 @@ function classifyUrgency(timeMarker: string | null): UrgencyBucket {
 
 /** Parses "1. [Now] Move medication upstairs." lines into structured steps. */
 function parseSteps(content: string): ParsedStep[] {
-  const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // Strip markdown emphasis (the model sometimes wraps "[Now]" as
+    // "**[Now]**"), which otherwise breaks the bracket match below.
+    .map((l) => l.replace(/\*\*/g, "").replace(/__/g, ""));
+
   const steps: ParsedStep[] = [];
 
   for (const line of lines) {
