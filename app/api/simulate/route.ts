@@ -73,8 +73,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const { household, resilienceScore, question } = parsed.data;
   const prompt = buildSimulationPrompt(
-    household as HouseholdProfile,
-    resilienceScore as ResilienceScore | null | undefined,
+    household as unknown as HouseholdProfile,
+    resilienceScore as unknown as ResilienceScore | null | undefined,
     question
   );
 
