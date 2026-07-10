@@ -9,6 +9,7 @@ interface UseAuthResult {
   linkSent: boolean;
   error: string | null;
   sendMagicLink: (email: string) => Promise<void>;
+  signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -43,19 +44,54 @@ export function useAuth(): UseAuthResult {
     setError(null);
     setLinkSent(false);
 
-    const { error: signInError } = await supabase.auth.signInWithOtp({ email });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          // Send the link straight to /dashboard, not the site root.
+          // The root page does a server-side redirect to /landing,
+          // which strips the auth token from the URL before Supabase's
+          // client-side code ever gets a chance to read it.
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
 
-    if (signInError) {
-      setError(signInError.message);
-    } else {
-      setLinkSent(true);
+      if (signInError) {
+        setError(signInError.message || "Could not send the sign-in link. Please try again.");
+      } else {
+        setLinkSent(true);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not reach the authentication server. Please try again."
+      );
+    } finally {
+      setIsSendingLink(false);
     }
-    setIsSendingLink(false);
+  }, []);
+
+  const signInAnonymously = useCallback(async (): Promise<void> => {
+    setError(null);
+    const { error: anonError } = await supabase.auth.signInAnonymously();
+    if (anonError) {
+      setError(anonError.message);
+    }
   }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
   }, []);
 
-  return { session, isLoading, isSendingLink, linkSent, error, sendMagicLink, signOut };
+  return {
+    session,
+    isLoading,
+    isSendingLink,
+    linkSent,
+    error,
+    sendMagicLink,
+    signInAnonymously,
+    signOut,
+  };
 }
