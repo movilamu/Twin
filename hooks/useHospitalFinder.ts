@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { findNearbyHospitals, type HospitalResult, type Severity } from "@/lib/overpass";
+import type { HospitalResult, Severity } from "@/lib/overpass";
 import type { Coordinates } from "@/hooks/useGeolocation";
 import { cacheHospitalSearch, getCachedHospitalSearch } from "@/lib/offline-cache";
 
@@ -11,7 +11,7 @@ interface UseHospitalFinderResult {
   search: (origin: Coordinates, severity: Severity) => Promise<void>;
 }
 
-/** Drives the "find nearby hospitals" flow, wrapping the Overpass client with UI state. */
+/** Drives the "find nearby hospitals" flow via our own server-side proxy route. */
 export function useHospitalFinder(): UseHospitalFinderResult {
   const [hospitals, setHospitals] = useState<HospitalResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -24,7 +24,26 @@ export function useHospitalFinder(): UseHospitalFinderResult {
     setIsShowingCached(false);
 
     try {
-      const results = await findNearbyHospitals(origin, severity);
+      const response = await fetch("/api/hospitals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+          severity,
+        }),
+      });
+
+      const body = (await response.json().catch(() => null)) as
+        | { hospitals?: HospitalResult[]; error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(body?.error ?? "Could not reach the hospital directory.");
+      }
+
+      const results = body?.hospitals ?? [];
+
       if (results.length === 0) {
         setError("No matching facilities found nearby. Try a wider search or call emergency services.");
       } else {
